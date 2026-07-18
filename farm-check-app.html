@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Farm Check — Farmer Decision Support</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body { margin:0; background:#F6F3E9; font-family:'Inter',sans-serif; color:#2B2318; }
+  .slab { font-family:'Zilla Slab',serif; }
+  .wrap { max-width:460px; margin:0 auto; padding:24px 18px 60px; }
+  .header { text-align:center; margin-bottom:24px; }
+  .header h1 { font-size:28px; font-weight:700; margin:0; }
+  .header p { font-size:14px; color:#6B7A5E; margin-top:4px; }
+  .sample-btn { margin-top:10px; display:inline-flex; align-items:center; gap:6px; background:none;
+    border:1px dashed #A79F7C; border-radius:20px; padding:5px 14px; font-size:12px; color:#7A7256; cursor:pointer; }
+  .step { margin-bottom:22px; }
+  .step-label { display:flex; align-items:center; gap:10px; }
+  .step-num { width:26px; height:26px; border-radius:50%; background:#2B2318; color:#F6F3E9;
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+  .step-title { font-size:16px; font-weight:600; }
+  .water-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+  .water-btn { padding:14px 8px; border-radius:10px; text-align:center; cursor:pointer;
+    border:1px solid #D8D2BC; background:#FFFFFF; color:#2B2318; transition:all .12s ease; }
+  .water-btn:active { transform:scale(0.97); }
+  .water-btn.selected { border:2px solid #2B2318; background:#2B2318; color:#F6F3E9; }
+  .water-btn .lbl { font-size:16px; font-weight:600; }
+  .water-btn .hint { font-size:11px; opacity:0.75; margin-top:2px; }
+  .big-input-box { display:flex; align-items:center; gap:8px; background:#FFFFFF; border:1px solid #D8D2BC;
+    border-radius:10px; padding:12px 14px; margin-top:8px; }
+  .big-input-box input { width:100%; font-size:18px; border:none; outline:none; background:transparent; color:#2B2318; }
+  .big-input-box .suffix { font-size:14px; color:#8A8368; }
+  .auto-note { font-size:11px; color:#8A8368; margin-top:6px; margin-left:2px; }
+  .field-row { display:flex; align-items:center; justify-content:space-between; background:#FFFFFF;
+    border:1px solid #D8D2BC; border-radius:10px; padding:10px 14px; margin-bottom:10px; }
+  .field-row .flabel { font-size:13px; color:#2B2318; max-width:190px; }
+  .field-row .compact-input { display:flex; align-items:center; gap:6px; }
+  .field-row .compact-input input { width:70px; text-align:right; font-size:18px; border:none; outline:none; background:transparent; color:#2B2318; }
+  .field-row .compact-input .suffix { font-size:14px; color:#8A8368; }
+  .check-btn { width:100%; padding:16px 0; font-size:17px; font-weight:700; background:#C8C2AC; color:#F6F3E9;
+    border:none; border-radius:12px; cursor:not-allowed; margin-bottom:24px; }
+  .check-btn.active { background:#2F5D34; cursor:pointer; }
+  .result-card { display:none; border-radius:16px; padding:24px 20px; text-align:center; border:2px solid; }
+  .result-card .score { font-size:52px; font-weight:700; line-height:1; }
+  .result-card .label { font-size:20px; font-weight:700; margin-top:6px; }
+  .result-card .advice { font-size:14px; color:#4A4534; margin-top:10px; line-height:1.5; }
+  .legend { margin-top:28px; }
+  .legend-title { font-size:12px; color:#8A8368; margin-bottom:8px; text-align:center; }
+  .legend-row { display:flex; align-items:center; gap:10px; font-size:13px; margin-bottom:6px; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend-range { width:70px; color:#6B6448; }
+  svg.icon { flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <h1 class="slab">Farm Check</h1>
+    <p>Answer 4 quick questions to see how good conditions are today.</p>
+    <button class="sample-btn" onclick="fillSample()">✨ Try a sample answer</button>
+  </div>
+
+  <!-- Step 1: Water -->
+  <div class="step">
+    <div class="step-label">
+      <div class="step-num">1</div>
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A7A8C" stroke-width="2"><path d="M12 2.69s5 5.02 5 9.31a5 5 0 0 1-10 0c0-4.29 5-9.31 5-9.31z"/></svg>
+      <div class="step-title">What is the water level?</div>
+    </div>
+    <div class="water-grid" id="waterGrid"></div>
+  </div>
+
+  <!-- Step 2: Temperature -->
+  <div class="step">
+    <div class="step-label">
+      <div class="step-num">2</div>
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A6483C" stroke-width="2"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+      <div class="step-title">What is the temperature today?</div>
+    </div>
+    <div class="big-input-box">
+      <input type="number" id="temperature" placeholder="e.g. 30" oninput="recalc()" />
+      <span class="suffix">°C</span>
+    </div>
+    <div class="auto-note">🔜 This will fill in on its own once the app connects to weather data.</div>
+  </div>
+
+  <!-- Step 3: Rainfall -->
+  <div class="step">
+    <div class="step-label">
+      <div class="step-num">3</div>
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A7A8C" stroke-width="2"><path d="M16 13v8"/><path d="M8 13v8"/><path d="M12 15v8"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>
+      <div class="step-title">How much rain fell?</div>
+    </div>
+    <div class="big-input-box">
+      <input type="number" id="rainfall" placeholder="e.g. 100" oninput="recalc()" />
+      <span class="suffix">mm</span>
+    </div>
+    <div class="auto-note">🔜 This will fill in on its own once the app connects to weather data.</div>
+  </div>
+
+  <!-- Step 4: Market price -->
+  <div class="step">
+    <div class="step-label">
+      <div class="step-num">4</div>
+      <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B3821F" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
+      <div class="step-title">What is your market price like?</div>
+    </div>
+    <div style="margin-top:10px;">
+      <div class="field-row">
+        <div class="flabel">How much did you harvest? (kg)</div>
+        <div class="compact-input"><input type="number" id="harvestQty" placeholder="e.g. 500" oninput="recalc()" /><span class="suffix">kg</span></div>
+      </div>
+      <div class="field-row">
+        <div class="flabel">What price can you sell at? (per kg)</div>
+        <div class="compact-input"><input type="number" id="sellPrice" placeholder="e.g. 40" oninput="recalc()" /><span class="suffix">₱</span></div>
+      </div>
+      <div class="field-row">
+        <div class="flabel">What is the usual, fair price? (per kg)</div>
+        <div class="compact-input"><input type="number" id="fairPrice" placeholder="e.g. 25" oninput="recalc()" /><span class="suffix">₱</span></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="check-btn" id="checkBtn" onclick="checkResult()">Check My Farm Score</button>
+
+  <div class="result-card" id="resultCard">
+    <div class="score" id="resultScore"></div>
+    <div class="label" id="resultLabel"></div>
+    <div class="advice" id="resultAdvice"></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">What the score means</div>
+    <div id="legendList"></div>
+  </div>
+</div>
+
+<script>
+  const RAINFALL_MAX = 200;
+  const TEMP_MIN = 10, TEMP_MAX = 40;
+
+  const WATER_OPTIONS = [
+    { key: "very_low", label: "Very Low", hint: "dry, cracked soil", score: 10 },
+    { key: "low", label: "Low", hint: "soil dry, little water", score: 35 },
+    { key: "adequate", label: "Adequate", hint: "enough for crops", score: 65 },
+    { key: "high", label: "High", hint: "wet, full supply", score: 90 },
+  ];
+
+  const SCALE = [
+    { max: 100, min: 80, label: "Highly Favorable", color: "#2F5D34", bg: "#E3EBDD", advice: "Great conditions. Good time to plant, water, or sell." },
+    { max: 79, min: 60, label: "Favorable", color: "#5C7A30", bg: "#EAEEDB", advice: "Good conditions overall. Safe to move ahead." },
+    { max: 59, min: 40, label: "Moderate Risk", color: "#B3821F", bg: "#F3EAD3", advice: "Some risk. Watch conditions closely before deciding." },
+    { max: 39, min: 0, label: "High Risk", color: "#A6483C", bg: "#F2DFDC", advice: "Risky conditions. Consider waiting or a backup plan." },
+  ];
+
+  let selectedWater = null;
+
+  function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  function renderWaterGrid() {
+    const grid = document.getElementById("waterGrid");
+    grid.innerHTML = "";
+    WATER_OPTIONS.forEach(o => {
+      const btn = document.createElement("div");
+      btn.className = "water-btn" + (selectedWater === o.key ? " selected" : "");
+      btn.innerHTML = `<div class="lbl">${o.label}</div><div class="hint">${o.hint}</div>`;
+      btn.onclick = () => { selectedWater = o.key; renderWaterGrid(); recalc(); };
+      grid.appendChild(btn);
+    });
+  }
+
+  function renderLegend() {
+    const list = document.getElementById("legendList");
+    list.innerHTML = "";
+    SCALE.forEach(s => {
+      const row = document.createElement("div");
+      row.className = "legend-row";
+      row.innerHTML = `<span class="legend-dot" style="background:${s.color}"></span>
+        <span class="legend-range">${s.min}–${s.max}</span><span>${s.label}</span>`;
+      list.appendChild(row);
+    });
+  }
+
+  function getScores() {
+    const temperature = document.getElementById("temperature").value;
+    const rainfall = document.getElementById("rainfall").value;
+    const harvestQty = document.getElementById("harvestQty").value;
+    const sellPrice = document.getElementById("sellPrice").value;
+    const fairPrice = document.getElementById("fairPrice").value;
+
+    const W = selectedWater ? WATER_OPTIONS.find(o => o.key === selectedWater).score : null;
+    const T = temperature === "" ? null : clamp(((Number(temperature) - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)) * 100);
+    const R = rainfall === "" ? null : clamp((Number(rainfall) / RAINFALL_MAX) * 100);
+
+    let P = null;
+    if (harvestQty !== "" && sellPrice !== "" && fairPrice !== "" && Number(fairPrice) > 0) {
+      // MPS = Quantity produced x (Producer Price - Reference Price), scaled to a 0-100 score
+      P = clamp(50 * (Number(sellPrice) / Number(fairPrice)));
+    }
+    return { R, T, W, P };
+  }
+
+  function recalc() {
+    const { R, T, W, P } = getScores();
+    const allFilled = [R, T, W, P].every(s => s !== null);
+    const btn = document.getElementById("checkBtn");
+    btn.className = "check-btn" + (allFilled ? " active" : "");
+  }
+
+  function checkResult() {
+    const { R, T, W, P } = getScores();
+    const allFilled = [R, T, W, P].every(s => s !== null);
+    if (!allFilled) return;
+    const fdsi = Math.round(0.25 * R + 0.25 * T + 0.25 * W + 0.25 * P);
+    const tier = SCALE.find(s => fdsi >= s.min);
+
+    const card = document.getElementById("resultCard");
+    card.style.display = "block";
+    card.style.background = tier.bg;
+    card.style.borderColor = tier.color;
+    document.getElementById("resultScore").style.color = tier.color;
+    document.getElementById("resultScore").textContent = fdsi;
+    document.getElementById("resultLabel").style.color = tier.color;
+    document.getElementById("resultLabel").textContent = tier.label;
+    document.getElementById("resultAdvice").textContent = tier.advice;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function fillSample() {
+    selectedWater = "high";
+    document.getElementById("temperature").value = 34;
+    document.getElementById("rainfall").value = 180;
+    document.getElementById("harvestQty").value = 500;
+    document.getElementById("sellPrice").value = 44;
+    document.getElementById("fairPrice").value = 25;
+    renderWaterGrid();
+    recalc();
+    document.getElementById("resultCard").style.display = "none";
+  }
+
+  renderWaterGrid();
+  renderLegend();
+</script>
+
+</body>
+</html>
